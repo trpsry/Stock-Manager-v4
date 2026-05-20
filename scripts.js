@@ -21,8 +21,8 @@ function callGAS(action, params) {
       };
       
       var script = document.createElement('script');
-      script.src = GAS_URL + '?action=' + action + '&callback=' + callbackName;
-      script.onerror = function() { reject(new Error('JSONP load error')); };
+      script.src = GAS_URL + '?action=' + action + '&callback=' + callbackName + '&_t=' + new Date().getTime();
+      script.onerror = function() { reject(new Error('JSONP load error (ตรวจสอบการ Deploy GAS เป็น "Anyone")')); };
       document.body.appendChild(script);
     });
   }
@@ -688,8 +688,14 @@ function populateSheetSelect() {
 
 function loadAllData() {
   showSkeletons();
+  console.log('Fetching data from GAS...');
   callGAS('getAllSheetData', {})
     .then(function(raw) {
+      console.log('Received raw data:', raw);
+      if (!raw) {
+        showError('Error: ได้รับข้อมูลว่างจาก Server');
+        return;
+      }
       try {
         var res = JSON.parse(raw);
         if (res.success) {
@@ -700,9 +706,15 @@ function loadAllData() {
           populateSheetSelect();
           renderList();
         } else showError('Error: ' + res.error);
-      } catch (e) { showError('Parse Error: ' + e.message); }
+      } catch (e) { 
+        console.error('Parse Error details:', e);
+        showError('Parse Error: ' + e.message + ' (ดูรายละเอียดใน Console F12)'); 
+      }
     })
-    .catch(function(err) { showError('ไม่สามารถเชื่อมต่อ GAS ได้: ' + (err.message || 'Unknown')); });
+    .catch(function(err) { 
+      console.error('Connection Error:', err);
+      showError('ไม่สามารถเชื่อมต่อ GAS ได้: ' + (err.message || 'Unknown')); 
+    });
 }
 
 function showSkeletons() {
