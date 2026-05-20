@@ -1,0 +1,126 @@
+/* ── Tailwind Config ─────────────────────────────────────────── */
+/* ใส่ config ผ่าน script tag ใน index.html แทน */
+
+/* ── Base ──────────────────────────────────────────────────────── */
+* { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background-color: #f8fafc; color: #0f172a; }
+body { padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; }
+input, select, textarea { font-size: 16px !important; }
+
+/* ── Custom Scrollbar ──────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Shimmer ───────────────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer-load 1.5s infinite linear;
+}
+@keyframes shimmer-load { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+#tabs-scroll { scroll-padding-inline: 1.25rem; }
+
+.tab-btn {
+  position: relative;
+  min-height: 42px;
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  background: rgba(255, 255, 255, 0.78);
+  color: #475569;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75), 0 4px 14px rgba(15,23,42,0.04);
+}
+.tab-btn:hover { transform: translateY(-1px); background: #ffffff; color: #1e293b; border-color: rgba(147, 197, 253, 0.9); }
+.tab-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14), inset 0 1px 0 rgba(255,255,255,0.75); }
+.tab-btn.active { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; box-shadow: 0 12px 26px -14px rgba(37, 99, 235, 0.85); border-color: rgba(37, 99, 235, 0.2); }
+
+.tab-priority {
+  padding-left: 1rem !important;
+  padding-right: 1.15rem !important;
+  background: #ffffff;
+  color: #0f172a;
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.42), inset 0 1px 0 rgba(255,255,255,0.86);
+  font-weight: 800;
+}
+.tab-priority::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem; height: 0.5rem;
+  margin-right: 0.55rem;
+  border-radius: 9999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  vertical-align: 0.08rem;
+}
+.tab-priority.tab-aging { border-color: rgba(245, 158, 11, 0.32); }
+.tab-priority.tab-aging::before { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14); }
+.tab-priority.tab-products.active { background: linear-gradient(135deg, #1d4ed8, #2563eb); box-shadow: 0 16px 32px -18px rgba(29, 78, 216, 0.95); }
+.tab-priority.tab-aging.active { background: linear-gradient(135deg, #2563eb, #1e40af); border-color: rgba(37, 99, 235, 0.26); box-shadow: 0 16px 32px -18px rgba(37, 99, 235, 0.95); }
+.tab-priority.active::before { background: rgba(255, 255, 255, 0.95); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22); }
+
+/* ── Highlight Flash ───────────────────────────────────────────── */
+@keyframes highlight-flash {
+  0%   { background-color: rgba(254, 240, 138, 0.6); transform: scale(1.02); }
+  100% { background-color: transparent; transform: scale(1); }
+}
+.highlight-product { animation: highlight-flash 2.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 10; }
+
+/* ── Subtab ────────────────────────────────────────────────────── */
+.subtab-btn.active { background-color: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+
+/* ── Timestamp Label ───────────────────────────────────────────── */
+.timestamp-label { font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: 0.025em; }
+
+/* ── Icon Button ───────────────────────────────────────────────── */
+.icon-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; }
+
+/* ── Scanner Modal ─────────────────────────────────────────────── */
+#scanner-viewfinder {
+  position: relative;
+  background: #000;
+  border-radius: 24px;
+  overflow: hidden;
+  aspect-ratio: 1/1;
+  max-height: 300px;
+}
+#scanner-viewfinder video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scanner-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.scanner-frame::before {
+  content: '';
+  width: 60%;
+  height: 60%;
+  border: 3px solid #2563eb;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+  animation: scanner-pulse 2s ease-in-out infinite;
+}
+@keyframes scanner-pulse {
+  0%, 100% { border-color: #2563eb; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 0 0 rgba(37,99,235,0.4); }
+  50%       { border-color: #60a5fa; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 20px 4px rgba(37,99,235,0.3); }
+}
+.scanner-line {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #2563eb, transparent);
+  animation: scanner-line 2s ease-in-out infinite;
+}
+@keyframes scanner-line {
+  0%   { top: 20%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 80%; opacity: 0; }
+}
