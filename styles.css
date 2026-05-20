@@ -26,34 +26,29 @@ input, select, textarea { font-size: 16px !important; }
 }
 @keyframes shimmer-load { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* ── Animations ────────────────────────────────────────────────── */
-@keyframes bounce-subtle {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-.animate-bounce-subtle { animation: bounce-subtle 3s ease-in-out infinite; }
-
-/* ── Floating Scanner Button ───────────────────────────────────── */
-.scanner-fab {
-  position: fixed;
-  right: max(1.25rem, calc(env(safe-area-inset-right) + 1rem));
-  bottom: calc(6rem + env(safe-area-inset-bottom));
-  width: 3.5rem;
-  height: 3.5rem;
-  display: inline-flex;
+/* ── Header Actions ────────────────────────────────────────────── */
+.header-action-group {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.header-action-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
   line-height: 0;
 }
-.scanner-fab svg {
+.header-action-icon {
+  width: 18px;
+  height: 18px;
   display: block;
   flex: none;
-}
-@media (min-width: 640px) {
-  .scanner-fab {
-    right: 1.5rem;
-    bottom: 1.5rem;
-  }
+  overflow: visible;
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.75;
 }
 
 /* ── Tabs ──────────────────────────────────────────────────────── */
