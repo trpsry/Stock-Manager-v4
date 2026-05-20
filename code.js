@@ -10,6 +10,21 @@ const LOT_TIME_HEADER = 'Update Lot';
 const APP_ICON_URL = 'https://i.postimg.cc/zDFxrHNZ/image.png';
 const SYSTEM_SHEETS = ['Aging', 'Aging_Order'];
 const TEMPLATE_SHEET_NAMES = ['Oishi', 'Est', 'Alc.', 'F&N'];
+const DATA_CACHE_KEY = 'stock-manager:getAllSheetData:v1';
+const DATA_CACHE_TTL_SECONDS = 30;
+
+function clearDataCache_() {
+  try {
+    CacheService.getScriptCache().remove(DATA_CACHE_KEY);
+  } catch (err) {}
+}
+
+function writeDataCache_(payload) {
+  if (!payload || String(payload).length > 95000) return;
+  try {
+    CacheService.getScriptCache().put(DATA_CACHE_KEY, payload, DATA_CACHE_TTL_SECONDS);
+  } catch (err) {}
+}
 
 // ── doGet: handle API requests via JSONP/GET ──────────────────
 function doGet(e) {
@@ -173,6 +188,10 @@ function formatOh_(value) {
 // ── ดึงข้อมูลทุกชีท ────────────────────────────────────────────
 function getAllSheetData() {
   try {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(DATA_CACHE_KEY);
+    if (cached) return cached;
+
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const result = {};
 
@@ -285,7 +304,9 @@ function getAllSheetData() {
 
     result['All'] = allCombined;
 
-    return JSON.stringify({ success: true, data: result, sheetNames: mainSheets });
+    const response = JSON.stringify({ success: true, data: result, sheetNames: mainSheets });
+    writeDataCache_(response);
+    return response;
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
   }
@@ -304,6 +325,7 @@ function saveLotData(sheetName, rowIndex, l1, l2, l3, l4) {
     const now = new Date();
     sheet.getRange(rowIndex, 11).setValue(now);
 
+    clearDataCache_();
     return JSON.stringify({ success: true, lotTime: formatUpdateDate_(now) });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -323,6 +345,7 @@ function saveProductData(sheetName, rowIndex, sku, name) {
     range.setNumberFormat('@');
     range.setValues([[cleanSku, cleanName]]);
 
+    clearDataCache_();
     return JSON.stringify({ success: true });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -340,6 +363,7 @@ function saveOhData(sheetName, rowIndex, oh) {
     sheet.getRange(rowIndex, 9).setValue(formatOh_(oh));
     sheet.getRange(rowIndex, 10).setValue(now);
 
+    clearDataCache_();
     return JSON.stringify({ success: true, ohTime: formatUpdateDate_(now) });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -359,6 +383,7 @@ function clearLotData(sheetName, rowIndex) {
     range.setValues([['', '', '', '']]);
     sheet.getRange(rowIndex, 11).setValue(now);
 
+    clearDataCache_();
     return JSON.stringify({ success: true, lotTime: formatUpdateDate_(now) });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -381,6 +406,7 @@ function toggleFavorite(sheetName, rowIndex, currentStatus) {
     sheet.getRange(rowIndex, 12).setValue(newStatus);
     if (newStatus) sheet.getRange(rowIndex, 13).setValue(now);
 
+    clearDataCache_();
     return JSON.stringify({ success: true, fav: newStatus, favTime: newStatus ? now.getTime() : null });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -442,6 +468,7 @@ function addProduct(sheetName, sku, name, size) {
       }
     }
 
+    clearDataCache_();
     return JSON.stringify({ success: true, data: { rowIndex: newRowIndex, sku: cleanSku, name: cleanName, size: size, sheetName: sheetName } });
   } catch (err) {
     return JSON.stringify({ success: false, error: err.message });
@@ -472,6 +499,7 @@ function reorderProduct(skuA, skuB) {
       const dataB = agingSheet.getRange(rowB, 2, 1, 3).getValues();
       agingSheet.getRange(rowA, 2, 1, 3).setValues(dataB);
       agingSheet.getRange(rowB, 2, 1, 3).setValues(dataA);
+      clearDataCache_();
       return JSON.stringify({ success: true });
     }
 

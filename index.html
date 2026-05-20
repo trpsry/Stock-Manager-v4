@@ -16,69 +16,71 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="dns-prefetch" href="https://script.google.com" />
+
   <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/zDFxrHNZ/image.png?v=20260502" />
   <link rel="apple-touch-icon" sizes="180x180" href="https://i.postimg.cc/zDFxrHNZ/image.png?v=20260502" />
   <link rel="mainfest" href="mainfest.json" />
 
-  <!-- Tailwind 3 CDN -->
+  <!-- Tailwind 3 CDN - Load but with deferred performance -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
-  <!-- ZXing Barcode Scanner -->
-  <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="styles.css?v=1.0.4" />
+  <link rel="stylesheet" href="styles.css?v=1.0.5" />
 </head>
 
-<body>
+  <body class="bg-slate-50">
+
+  <!-- Floating Action Button: Scanner (Premium Mobile Pattern from Open Design) -->
+  <button type="button" onclick="openScannerModal()" aria-label="สแกนบาร์โค้ด"
+    class="scanner-fab z-50 rounded-full bg-brand-600 text-white shadow-2xl shadow-brand-600/40 active:scale-90 transition-all hover:bg-brand-700">
+    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4m10-16h4a2 2 0 012 2v4m0 6v4a2 2 0 01-2 2h-4M7 12h.01M12 12h.01M17 12h.01" />
+    </svg>
+  </button>
 
   <header id="main-header"
-    class="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
+    class="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
 
     <!-- ชั้นที่ 1: Logo + Search + Refresh -->
-    <div id="header-top" class="flex items-center gap-2 px-3.5 py-2.5 sm:gap-2.5 sm:px-4 transition-all duration-300">
+    <div id="header-top" class="flex items-center gap-3 px-4 py-3 transition-all duration-300">
       <div
-        class="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center shadow-md shadow-brand-600/30 flex-shrink-0">
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="w-10 h-10 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-600/20 flex-shrink-0">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       </div>
       <div class="relative flex-1 min-w-0">
-        <div class="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
-        <input id="search-input" type="search" placeholder="ค้นหาสินค้า..."
+        <input id="search-input" type="search" placeholder="ค้นหาสินค้า หรือบาร์โค้ด..."
           oninput="onSearch(); toggleClearBtn(this.value)"
-          class="w-full px-3 py-2 pl-8 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-sm transition-all duration-200 outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/10" />
+          class="w-full px-4 py-2.5 pl-10 pr-10 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm transition-all duration-200 outline-none focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10" />
         <button id="clearSearchBtn" onclick="clearSearch()"
-          class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 p-0.5 transition-colors">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 p-1 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <!-- กลุ่มปุ่มขวา -->
-      <div class="flex items-center gap-1.5 flex-shrink-0">
-        <button onclick="openScannerModal()" aria-label="สแกนบาร์โค้ด"
-          class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 active:scale-90 transition-transform flex items-center justify-center">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-              d="M3 9V5a2 2 0 012-2h4M3 15v4a2 2 0 002 2h4m10-16h4a2 2 0 012 2v4m0 6v4a2 2 0 01-2 2h-4M7 12h.01M12 12h.01M17 12h.01" />
-          </svg>
-        </button>
-        <button onclick="loadAllData()" aria-label="รีเฟรช"
-          class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 active:scale-90 transition-transform flex items-center justify-center">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
-      </div>
+
+      <button onclick="loadAllData()" aria-label="รีเฟรช"
+        class="w-10 h-10 rounded-2xl bg-slate-100 text-slate-600 active:scale-90 transition-transform flex items-center justify-center flex-shrink-0 hover:bg-slate-200">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
     </div>
 
     <!-- ชั้นที่ 2: Tabs -->
@@ -138,8 +140,8 @@
     <div class="px-4 py-4 pb-32">
       <div class="mb-3 flex items-center justify-between">
         <span id="stats-text"
-          class="text-[10px] font-black text-slate-400 tracking-widest uppercase">กำลังโหลดข้อมูล...</span>
-        <span class="text-[8px] font-bold text-slate-300 uppercase">Version 1.0.4-Hybrid</span>
+          class="text-[10px] font-black text-slate-500 tracking-widest uppercase">กำลังโหลดข้อมูล...</span>
+        <span class="text-[8px] font-bold text-slate-400 uppercase">Version 1.0.5-Hybrid</span>
       </div>
       <div id="product-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-slate-900"></div>
       <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
@@ -154,9 +156,9 @@
     </div>
   </main>
 
-  <!-- ไฟล์ Modal และ Script -->
-  <script src="modals.js?v=1.0.4"></script>
-  <script src="scripts.js?v=1.0.4"></script>
+  <!-- ไฟล์ Modal และ Script - Deferred -->
+  <script src="modals.js?v=1.0.5" defer></script>
+  <script src="scripts.js?v=1.0.5" defer></script>
 
 </body>
 

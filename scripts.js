@@ -5,6 +5,10 @@
 
 // ── GAS URL — ใส่ URL ของ GAS Web App ที่นี่ ───────────────────
 var GAS_URL = 'https://script.google.com/macros/s/AKfycbydi-JmXVn6_wTlsa1i8AK5he8qxW_Q4z54fOYXytLYsAoZt8Qnd4KHW3nUFJScJMDf/exec';
+var ZXING_SCRIPT_URL = 'https://unpkg.com/@zxing/library@latest/umd/index.min.js';
+var ZXING_SCRIPT_ID  = 'zxing-library-script';
+var APP_CACHE_KEY    = 'stock-manager-v3-cache-v2';
+var APP_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // ── callGAS: แทน google.script.run ─────────────────────────────
 function callGAS(action, params) {
@@ -14,16 +18,20 @@ function callGAS(action, params) {
   if (action === 'getAllSheetData') {
     return new Promise(function(resolve, reject) {
       var callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+      var script = document.createElement('script');
       window[callbackName] = function(data) {
         delete window[callbackName];
-        document.body.removeChild(script);
+        if (script.parentNode) script.parentNode.removeChild(script);
         resolve(JSON.stringify(data));
       };
       
-      var script = document.createElement('script');
       script.src = GAS_URL + '?action=' + action + '&callback=' + callbackName + '&_t=' + new Date().getTime();
-      script.onerror = function() { reject(new Error('JSONP load error (ตรวจสอบการ Deploy GAS เป็น "Anyone")')); };
-      document.body.appendChild(script);
+      script.onerror = function() {
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        reject(new Error('JSONP load error (ตรวจสอบการ Deploy GAS เป็น "Anyone")'));
+      };
+      document.head.appendChild(script);
     });
   }
 
@@ -53,6 +61,8 @@ var state = {
   reorderMode: false,
   sheetNames:  []
 };
+var _dataRequestId    = 0;
+var _zxingLoadPromise = null;
 
 // ── Lot Sort ─────────────────────────────────────────────────────
 function parseDateStr(s) {
@@ -82,6 +92,52 @@ function clearSearch() {
   toggleClearBtn('');
   state.search = '';
   renderList();
+}
+
+function readAppCache() {
+  try {
+    var raw = window.localStorage ? localStorage.getItem(APP_CACHE_KEY) : '';
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (!parsed || !parsed.data || !Array.isArray(parsed.sheetNames)) return null;
+    return parsed;
+  } catch (err) {
+    return null;
+  }
+}
+
+function writeAppCache(data, sheetNames) {
+  try {
+    if (!window.localStorage) return;
+    localStorage.setItem(APP_CACHE_KEY, JSON.stringify({
+      cachedAt: Date.now(),
+      data: data || {},
+      sheetNames: sheetNames || []
+    }));
+  } catch (err) {}
+}
+
+function applyDataSnapshot(data, sheetNames) {
+  state.allData = data || {};
+  state.sheetNames = Array.isArray(sheetNames) ? sheetNames : [];
+  if (state.subTab !== 'All' && state.subTab !== 'Favorite' && state.sheetNames.indexOf(state.subTab) === -1) {
+    state.subTab = 'All';
+  }
+  renderSubTabs();
+  populateSheetSelect();
+  renderList();
+}
+
+function hydrateFromCache() {
+  var cache = readAppCache();
+  if (!cache) return false;
+  applyDataSnapshot(cache.data, cache.sheetNames);
+  var age = Date.now() - Number(cache.cachedAt || 0);
+  var statsEl = document.getElementById('stats-text');
+  if (statsEl && age > APP_CACHE_TTL_MS) {
+    statsEl.textContent = statsEl.textContent + ' • กำลังอัปเดต';
+  }
+  return true;
 }
 
 // ── Render ───────────────────────────────────────────────────────
@@ -116,10 +172,10 @@ function renderList() {
       } else {
         el.innerHTML = buildCard(products[idx]);
       }
+      applySelects(el);
       frag.appendChild(el.firstElementChild);
     }
     list.appendChild(frag);
-    applySelects();
     if (idx < products.length) {
       _renderChunkTimer = setTimeout(renderChunk, 16);
     }
@@ -410,11 +466,14 @@ function buildLotPicker(u, n, val) {
   '</div>';
 }
 
-function applySelects() {
-  requestAnimationFrame(function() {
-    var sels = document.querySelectorAll('.lot-select[data-v]');
-    for (var i = 0; i < sels.length; i++) { var sel = sels[i]; sel.value = sel.getAttribute('data-v') || ''; sel.removeAttribute('data-v'); }
-  });
+function applySelects(root) {
+  var scope = root || document;
+  var sels = scope.querySelectorAll('.lot-select[data-v]');
+  for (var i = 0; i < sels.length; i++) {
+    var sel = sels[i];
+    sel.value = sel.getAttribute('data-v') || '';
+    sel.removeAttribute('data-v');
+  }
 }
 
 function readLot(u, n) {
@@ -686,12 +745,21 @@ function populateSheetSelect() {
   }).join('') + '<option value="__NEW__">+ เพิ่มหมวดหมู่ใหม่...</option>';
 }
 
-function loadAllData() {
-  showSkeletons();
-  console.log('Fetching data from GAS...');
+function loadAllData(options) {
+  options = options || {};
+  var requestId = ++_dataRequestId;
+  var usedCache = false;
+
+  if (options.useCache === true) {
+    usedCache = hydrateFromCache();
+  }
+  if (!usedCache) {
+    showSkeletons();
+  }
+
   callGAS('getAllSheetData', {})
     .then(function(raw) {
-      console.log('Received raw data:', raw);
+      if (requestId !== _dataRequestId) return;
       if (!raw) {
         showError('Error: ได้รับข้อมูลว่างจาก Server');
         return;
@@ -699,21 +767,23 @@ function loadAllData() {
       try {
         var res = JSON.parse(raw);
         if (res.success) {
-          state.allData   = res.data;
-          state.sheetNames = res.sheetNames || [];
-          if (state.subTab !== 'All' && state.subTab !== 'Favorite' && state.sheetNames.indexOf(state.subTab) === -1) state.subTab = 'All';
-          renderSubTabs();
-          populateSheetSelect();
-          renderList();
-        } else showError('Error: ' + res.error);
-      } catch (e) { 
-        console.error('Parse Error details:', e);
-        showError('Parse Error: ' + e.message + ' (ดูรายละเอียดใน Console F12)'); 
+          applyDataSnapshot(res.data, res.sheetNames);
+          writeAppCache(res.data, res.sheetNames);
+        } else {
+          showError('Error: ' + res.error);
+        }
+      } catch (e) {
+        showError('Parse Error: ' + e.message + ' (ดูรายละเอียดใน Console F12)');
       }
     })
-    .catch(function(err) { 
-      console.error('Connection Error:', err);
-      showError('ไม่สามารถเชื่อมต่อ GAS ได้: ' + (err.message || 'Unknown')); 
+    .catch(function(err) {
+      if (requestId !== _dataRequestId) return;
+      if (!usedCache) {
+        showError('ไม่สามารถเชื่อมต่อ GAS ได้: ' + (err.message || 'Unknown'));
+      } else {
+        var statsEl = document.getElementById('stats-text');
+        if (statsEl) statsEl.textContent = statsEl.textContent.replace(' • กำลังอัปเดต', '') + ' • ใช้ข้อมูลแคช';
+      }
     });
 }
 
@@ -756,6 +826,56 @@ var _scannerStream  = null;
 var _codeReader     = null;
 var _scannerForAdd  = false;
 var _lastScannedSku = '';
+var _scannerSessionId = 0;
+
+function ensureScannerLibrary() {
+  if (typeof ZXing !== 'undefined') return Promise.resolve();
+  if (_zxingLoadPromise) return _zxingLoadPromise;
+
+  _zxingLoadPromise = new Promise(function(resolve, reject) {
+    var script = document.getElementById(ZXING_SCRIPT_ID);
+
+    function onLoad() {
+      if (typeof ZXing !== 'undefined') {
+        resolve();
+      } else {
+        _zxingLoadPromise = null;
+        reject(new Error('Scanner library พร้อมใช้งานไม่สำเร็จ'));
+      }
+    }
+
+    function onError() {
+      _zxingLoadPromise = null;
+      reject(new Error('โหลด Scanner library ไม่สำเร็จ'));
+    }
+
+    if (!script) {
+      script = document.createElement('script');
+      script.id = ZXING_SCRIPT_ID;
+      script.src = ZXING_SCRIPT_URL;
+      script.async = true;
+      script.addEventListener('load', onLoad, { once: true });
+      script.addEventListener('error', onError, { once: true });
+      document.head.appendChild(script);
+      return;
+    }
+
+    script.addEventListener('load', onLoad, { once: true });
+    script.addEventListener('error', onError, { once: true });
+    setTimeout(function() {
+      if (typeof ZXing !== 'undefined') resolve();
+    }, 0);
+  });
+
+  return _zxingLoadPromise;
+}
+
+function warmScannerLibrary() {
+  var schedule = window.requestIdleCallback || function(cb) { return setTimeout(cb, 1500); };
+  schedule(function() {
+    ensureScannerLibrary().catch(function() {});
+  });
+}
 
 function openScannerModal() {
   _scannerForAdd  = false;
@@ -774,6 +894,7 @@ function openScannerForAddProduct() {
 }
 
 function startScanner() {
+  var sessionId = ++_scannerSessionId;
   var statusEl   = document.getElementById('scanner-status');
   var resultBox  = document.getElementById('scanner-result-box');
   var actionsEl  = document.getElementById('scanner-actions');
@@ -781,49 +902,50 @@ function startScanner() {
 
   if (resultBox)  resultBox.classList.add('hidden');
   if (actionsEl)  actionsEl.classList.add('hidden');
-  if (statusEl)   statusEl.textContent = 'กำลังเปิดกล้อง...';
+  if (statusEl)   statusEl.textContent = 'กำลังโหลดตัวสแกน...';
   if (closeBtnEl) closeBtnEl.classList.remove('hidden');
 
-  // ตรวจสอบว่า ZXing โหลดแล้ว
-  if (typeof ZXing === 'undefined') {
-    if (statusEl) statusEl.textContent = 'โหลด Scanner library ไม่สำเร็จ กรุณา refresh';
-    return;
-  }
+  ensureScannerLibrary()
+    .then(function() {
+      if (sessionId !== _scannerSessionId) return;
+      if (document.getElementById('scanner-modal').classList.contains('hidden')) return;
 
-  _codeReader = new ZXing.BrowserMultiFormatReader();
-
-  _codeReader.decodeFromVideoDevice(null, 'scanner-video', function(result, err) {
-    if (result) {
-      var sku = result.getText();
-      _lastScannedSku = sku;
-
-      // หยุดสแกน
-      if (_codeReader) _codeReader.reset();
-
-      // แสดงผลลัพธ์
-      if (statusEl)  statusEl.textContent = '';
-      if (resultBox) resultBox.classList.remove('hidden');
-
-      document.getElementById('scanner-result-text').textContent = sku;
-
-      // ค้นหาชื่อสินค้าจาก state
-      var productName = findProductBySku(sku);
-      var nameEl = document.getElementById('scanner-product-name');
-      if (nameEl) nameEl.textContent = productName ? productName : 'ไม่พบสินค้าในระบบ';
-
-      if (actionsEl)  actionsEl.classList.remove('hidden');
-      if (closeBtnEl) closeBtnEl.classList.add('hidden');
-
-    } else if (err && !(err instanceof ZXing.NotFoundException)) {
-      // error จริง (ไม่ใช่แค่ยังไม่เจอ barcode)
-      if (statusEl) statusEl.textContent = 'ไม่สามารถเปิดกล้องได้: ' + err.message;
-    } else {
-      // กำลังสแกนอยู่
-      if (statusEl && statusEl.textContent === 'กำลังเปิดกล้อง...') {
-        statusEl.textContent = 'จ่อกล้องไปที่บาร์โค้ด...';
+      if (statusEl) statusEl.textContent = 'กำลังเปิดกล้อง...';
+      if (_codeReader) {
+        try { _codeReader.reset(); } catch (err) {}
       }
-    }
-  });
+      _codeReader = new ZXing.BrowserMultiFormatReader();
+
+      _codeReader.decodeFromVideoDevice(null, 'scanner-video', function(result, err) {
+        if (sessionId !== _scannerSessionId) return;
+
+        if (result) {
+          var sku = result.getText();
+          _lastScannedSku = sku;
+
+          if (_codeReader) _codeReader.reset();
+          if (statusEl)  statusEl.textContent = '';
+          if (resultBox) resultBox.classList.remove('hidden');
+
+          document.getElementById('scanner-result-text').textContent = sku;
+
+          var productName = findProductBySku(sku);
+          var nameEl = document.getElementById('scanner-product-name');
+          if (nameEl) nameEl.textContent = productName ? productName : 'ไม่พบสินค้าในระบบ';
+
+          if (actionsEl)  actionsEl.classList.remove('hidden');
+          if (closeBtnEl) closeBtnEl.classList.add('hidden');
+        } else if (err && !(err instanceof ZXing.NotFoundException)) {
+          if (statusEl) statusEl.textContent = 'ไม่สามารถเปิดกล้องได้: ' + err.message;
+        } else if (statusEl && statusEl.textContent === 'กำลังเปิดกล้อง...') {
+          statusEl.textContent = 'จ่อกล้องไปที่บาร์โค้ด...';
+        }
+      });
+    })
+    .catch(function(err) {
+      if (sessionId !== _scannerSessionId) return;
+      if (statusEl) statusEl.textContent = err.message || 'โหลด Scanner library ไม่สำเร็จ';
+    });
 }
 
 function findProductBySku(sku) {
@@ -895,6 +1017,7 @@ function resetScanner() {
 }
 
 function closeScannerModal() {
+  _scannerSessionId++;
   if (_codeReader) { try { _codeReader.reset(); } catch(e) {} _codeReader = null; }
   if (_scannerStream) { _scannerStream.getTracks().forEach(function(t) { t.stop(); }); _scannerStream = null; }
   var video = document.getElementById('scanner-video');
@@ -921,6 +1044,7 @@ if (typeof tailwind !== 'undefined') {
 // ── Boot ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
   updatePlaceholder();
-  loadAllData();
+  loadAllData({ useCache: true });
   initPullToRefresh();
+  warmScannerLibrary();
 });
