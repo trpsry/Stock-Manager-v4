@@ -111,10 +111,11 @@ input, select, textarea { font-size: 16px !important; }
 #scanner-viewfinder {
   position: relative;
   background: #000;
-  border-radius: 24px;
+  border-radius: 20px;
   overflow: hidden;
-  aspect-ratio: 1/1;
-  max-height: 300px;
+  width: 100%;
+  aspect-ratio: 4/3;      /* เปลี่ยนจาก 1/1 เป็น 4/3 แนวนอน */
+  max-height: 260px;
 }
 #scanner-viewfinder video {
   width: 100%;
@@ -131,28 +132,28 @@ input, select, textarea { font-size: 16px !important; }
 }
 .scanner-frame::before {
   content: '';
-  width: 60%;
-  height: 60%;
+  width: 75%;           /* กว้างขึ้น */
+  height: 45%;          /* เตี้ยลง — แนวนอน */
   border: 3px solid #2563eb;
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
   animation: scanner-pulse 2s ease-in-out infinite;
 }
 @keyframes scanner-pulse {
-  0%, 100% { border-color: #2563eb; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 0 0 rgba(37,99,235,0.4); }
-  50%       { border-color: #60a5fa; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 20px 4px rgba(37,99,235,0.3); }
+  0%, 100% { border-color: #2563eb; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 0 0 rgba(37,99,235,0.4); }
+  50%       { border-color: #60a5fa; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px 4px rgba(37,99,235,0.3); }
 }
 .scanner-line {
   position: absolute;
-  left: 20%;
-  right: 20%;
+  left: 13%;
+  right: 13%;
   height: 2px;
   background: linear-gradient(90deg, transparent, #2563eb, transparent);
   animation: scanner-line 2s ease-in-out infinite;
 }
 @keyframes scanner-line {
-  0%   { top: 20%; opacity: 0; }
+  0%   { top: 28%; opacity: 0; }
   10%  { opacity: 1; }
   90%  { opacity: 1; }
-  100% { top: 80%; opacity: 0; }
+  100% { top: 72%; opacity: 0; }
 }
