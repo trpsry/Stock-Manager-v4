@@ -962,9 +962,9 @@ function startScanner() {
 
             if (result) {
               var raw = result.getText();
-              // เพิ่มบรรทัดนี้ — แสดง raw ใน UI ชั่วคราว
+              // แสดง raw ก่อนเลย ชั่วคราว
 document.getElementById('scanner-result-text').textContent = raw;
-
+document.getElementById('scanner-result-box').classList.remove('hidden');
 // ── สกัด SKU: เลือก EAN-13 (13 หลัก) จาก Code128 รูปแบบ xxx/EAN13/xx
 var sku = '';
 var parts = raw.split('/');
