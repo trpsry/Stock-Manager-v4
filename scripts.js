@@ -963,9 +963,40 @@ function startScanner() {
             if (result) {
               var raw = result.getText();
 
-              // ── กรอง: เอาเฉพาะตัวเลข 8-14 ตัว (EAN/UPC/Code128 สินค้า) ──
-              var sku = raw.replace(/\D/g, '');
-              if (sku.length < 8 || sku.length > 14) return; // อ่านได้แต่ไม่ใช่บาร์โค้ดสินค้า
+              // ── สกัด SKU จาก raw string ────────────────────────────────────
+// กรณี Code128 ที่มี "/" เช่น "074859935/8858705607398/51"
+// ให้หาส่วนที่เป็น EAN-13 (13 หลัก) หรือ EAN-8 ก่อน
+var sku = '';
+
+// 1. ถ้า raw มี "/" ให้ split แล้วหาส่วนที่เป็น EAN-13
+if (raw.indexOf('/') !== -1) {
+  var parts = raw.split('/');
+  for (var pi = 0; pi < parts.length; pi++) {
+    var part = parts[pi].replace(/\D/g, '');
+    if (part.length >= 8 && part.length <= 14) {
+      sku = part;
+      break;
+    }
+  }
+}
+
+// 2. ถ้าไม่มี "/" ให้ใช้ raw ตรงๆ (ลบอักขระพิเศษออก)
+if (!sku) {
+  sku = raw.replace(/\D/g, '');
+}
+
+// 3. ถ้ายังไม่ได้ก็ข้ามไป
+if (!sku || sku.length < 8) return;
+
+// 4. ถ้ายาวเกิน 14 ให้ลองหา EAN-13 ที่ขึ้นต้นด้วย 885 หรือ 074 (Thai products)
+if (sku.length > 14) {
+  var match = sku.match(/(?:885|074|888|087|693)\d{10}/);
+  if (match) {
+    sku = match[0];
+  } else {
+    return; // หาไม่ได้จริงๆ ให้ข้าม
+  }
+}
 
               _lastScannedSku = sku;
               if (_codeReader) _codeReader.reset();
