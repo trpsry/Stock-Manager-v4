@@ -972,9 +972,11 @@ function startScanner() {
     var mid = parts[1].trim();
     if (/^\d{13,14}$/.test(mid)) sku = mid;
   } else {
-  var candidates = raw.match(/\d{13}/g) || [];
-  for (var ci = 0; ci < candidates.length; ci++) {
-    if (isValidEAN13(candidates[ci])) { sku = candidates[ci]; break; }
+  } else {
+  var digits = raw.replace(/\D/g, '');
+  for (var ci = 0; ci <= digits.length - 13; ci++) {
+    var candidate = digits.substr(ci, 13);
+    if (isValidEAN13(candidate)) { sku = candidate; break; }
   }
   if (!sku && /^\d{13,14}$/.test(raw.trim())) sku = raw.trim();
 }
