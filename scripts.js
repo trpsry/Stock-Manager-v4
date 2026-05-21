@@ -971,15 +971,21 @@ function startScanner() {
   if (parts.length >= 3) {
     var mid = parts[1].trim();
     if (/^\d{13,14}$/.test(mid)) sku = mid;
-  } else {
+
   } else {
   var digits = raw.replace(/\D/g, '');
+  var allValid = [];
   for (var ci = 0; ci <= digits.length - 13; ci++) {
     var candidate = digits.substr(ci, 13);
-    if (isValidEAN13(candidate)) { sku = candidate; break; }
+    if (isValidEAN13(candidate)) allValid.push(candidate);
   }
+  for (var vi = 0; vi < allValid.length; vi++) {
+    if (allValid[vi].indexOf('885') === 0) { sku = allValid[vi]; break; }
+  }
+  if (!sku && allValid.length > 0) sku = allValid[0];
   if (!sku && /^\d{13,14}$/.test(raw.trim())) sku = raw.trim();
 }
+
 
 
   if (!sku || sku.length < 13) return;
