@@ -962,6 +962,8 @@ function startScanner() {
 
             if (result) {
   var raw = result.getText();
+  // DEBUG: แสดง raw ใน toast ชั่วคราว
+  showToast('RAW: ' + raw, false);
 
   var sku = '';
   var parts = raw.split('/');
